@@ -1,0 +1,138 @@
+services:
+  # =========================================================================
+  # 1. FILA DE MENSAGENS E CACHE (Redis)
+  # =========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: realtime_redis
+    # Ativa o modo Append-Only File para gravar as operações em disco sem perda de mensagens
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      # Verifica a cada 5 segundos se o Redis responde ao comando nativo PING
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ai_pipeline_net
+
+  # =========================================================================
+  # 2. MOTOR DE BUSCA VETORIAL E TEXTUAL (OpenSearch)
+  # =========================================================================
+  opensearch:
+    image: opensearchproject/opensearch:2.12.0
+    container_name: realtime_opensearch
+    environment:
+      - cluster.name=realtime-ai-cluster
+      - node.name=opensearch-node1
+      # single-node: define execução local autônoma, sem necessidade de eleição de cluster
+      - discovery.type=single-node
+      # Impede que a memória da aplicação seja enviada para a partição swap do disco
+      - bootstrap.memory_lock=true
+      # Limita a memória da JVM Java (mínimo e máximo em 512MB) para poupar memória da máquina
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      # Esta variável informa ao script do container para pular a configuração de certificados demo
+      - DISABLE_SECURITY_PLUGIN=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200" # Porta HTTP da API REST
+      - "9600:9600" # Porta do analisador de métricas
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    healthcheck:
+      # Testa se a porta HTTP está respondendo requisições com código 200
+      test: ["CMD-SHELL", "curl -f -s http://localhost:9200/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 25s # Janela de carência para a JVM iniciar antes do primeiro teste
+    networks:
+      - ai_pipeline_net
+
+  # =========================================================================
+  # 3. INTERFACE VISUAL DE EXPLORAÇÃO (OpenSearch Dashboards)
+  # =========================================================================
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.12.0
+    container_name: realtime_dashboards
+    ports:
+      - "5601:5601"
+    environment:
+      # Aponta para o OpenSearch utilizando o protocolo HTTP padrão (sem SSL)
+      - 'OPENSEARCH_HOSTS=["http://opensearch:9200"]'
+      # Remove a obrigatoriedade de login na interface web
+      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    networks:
+      - ai_pipeline_net
+
+  # =========================================================================
+  # 4. API HTTP PRINCIPAL (FastAPI)
+  # =========================================================================
+  fastapi:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: realtime_fastapi
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - OPENSEARCH_HOST=opensearch
+      - OPENSEARCH_PORT=9200
+      - OPENSEARCH_INDEX=insights_index
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    depends_on:
+      redis:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    networks:
+      - ai_pipeline_net
+
+  # =========================================================================
+  # 5. WORKER DE PROCESSAMENTO ASSÍNCRONO (Celery)
+  # =========================================================================
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    container_name: realtime_celery_worker
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - OPENSEARCH_HOST=opensearch
+      - OPENSEARCH_PORT=9200
+      - OPENSEARCH_INDEX=insights_index
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    depends_on:
+      redis:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    networks:
+      - ai_pipeline_net
+
+# ===========================================================================
+# VOLUMES E REDES
+# ===========================================================================
+volumes:
+  redis-data:
+    driver: local
+  opensearch-data:
+    driver: local
+
+networks:
+  ai_pipeline_net:
+    driver: bridge

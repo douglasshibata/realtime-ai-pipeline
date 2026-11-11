@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time AI Intelligence & Ingestion Pipeline</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-primary: #38bdf8;
+            --accent-success: #4ade80;
+            --accent-warning: #fbbf24;
+            --accent-border: #334155;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        header {
+            border-bottom: 1px solid var(--accent-border);
+            padding-bottom: 1rem;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--accent-primary);
+        }
+
+        p.subtitle {
+            margin: 0.5rem 0 0;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--accent-border);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            background-color: #0f172a;
+            border: 1px solid var(--accent-border);
+            border-radius: 6px;
+            color: var(--text-color);
+            padding: 0.75rem;
+            font-size: 0.95rem;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .row {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            align-items: center;
+        }
+
+        select, button {
+            background-color: #0f172a;
+            border: 1px solid var(--accent-border);
+            border-radius: 6px;
+            color: var(--text-color);
+            padding: 0.6rem 1rem;
+            font-size: 0.95rem;
+        }
+
+        button {
+            background-color: #0284c7;
+            border-color: #0284c7;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #0369a1;
+        }
+
+        button:disabled {
+            background-color: #334155;
+            cursor: not-allowed;
+        }
+
+        .pipeline-tracker {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+            position: relative;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            position: relative;
+            z-index: 1;
+        }
+
+        .step-node {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #334155;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+
+        .step.active .step-node {
+            background-color: #0284c7;
+            color: white;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+        }
+
+        .step.completed .step-node {
+            background-color: var(--accent-success);
+            color: #0f172a;
+        }
+
+        .step-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .step.active .step-label, .step.completed .step-label {
+            color: var(--text-color);
+            font-weight: 600;
+        }
+
+        pre {
+            background-color: #0f172a;
+            border: 1px solid var(--accent-border);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            color: #38bdf8;
+            font-size: 0.85rem;
+            max-height: 300px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-positive { background-color: #166534; color: #4ade80; }
+        .badge-negative { background-color: #991b1b; color: #fca5a5; }
+        .badge-neutral { background-color: #854d0e; color: #fef08a; }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .result-box {
+            background-color: #0f172a;
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--accent-border);
+        }
+
+        .result-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 0.4rem;
+        }
+
+        .result-value {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ Real-Time AI Intelligence & Ingestion Pipeline</h1>
+            <p class="subtitle">Asynchronous LLM Extraction, OpenSearch Indexing & Server-Sent Events (SSE) Streaming</p>
+        </header>
+
+        <div class="card">
+            <label for="textInput">Ingest Unstructured Text (Review, Log, News, or Feedback)</label>
+            <textarea id="textInput" placeholder="Enter text to process... e.g. 'Customer complaint regarding unauthorized credit card charge on monthly billing. Please resolve immediately.'"></textarea>
+
+            <div class="row">
+                <select id="sourceSelect">
+                    <option value="customer_feedback">Customer Feedback</option>
+                    <option value="security_logs">Security Logs</option>
+                    <option value="financial_news">Financial News</option>
+                    <option value="support_ticket">Support Ticket</option>
+                </select>
+                <button id="submitBtn" onclick="submitText()">Ingest & Track Live</button>
+            </div>
+        </div>
+
+        <div class="card" id="statusCard" style="display: none;">
+            <h3>Live Execution Pipeline (SSE Stream)</h3>
+            <p id="taskIdDisplay" style="font-family: monospace; color: var(--accent-primary); font-size: 0.9rem;"></p>
+
+            <div class="pipeline-tracker">
+                <div class="step" id="step-queued">
+                    <div class="step-node">1</div>
+                    <div class="step-label">Queued</div>
+                </div>
+                <div class="step" id="step-processing">
+                    <div class="step-node">2</div>
+                    <div class="step-label">LLM Extraction</div>
+                </div>
+                <div class="step" id="step-indexing">
+                    <div class="step-node">3</div>
+                    <div class="step-label">OpenSearch</div>
+                </div>
+                <div class="step" id="step-completed">
+                    <div class="step-node">4</div>
+                    <div class="step-label">Completed</div>
+                </div>
+            </div>
+
+            <div id="insightsContainer" style="display: none; margin-top: 1.5rem;">
+                <h4>Extracted AI Insights</h4>
+                <div class="results-grid">
+                    <div class="result-box">
+                        <div class="result-title">Sentiment</div>
+                        <div class="result-value" id="resSentiment">-</div>
+                    </div>
+                    <div class="result-box">
+                        <div class="result-title">Category</div>
+                        <div class="result-value" id="resCategory">-</div>
+                    </div>
+                    <div class="result-box">
+                        <div class="result-title">Entities Extracted</div>
+                        <div class="result-value" id="resEntities">-</div>
+                    </div>
+                    <div class="result-box">
+                        <div class="result-title">OpenSearch Index Status</div>
+                        <div class="result-value" id="resIndexStatus" style="color: var(--accent-success)">Indexed</div>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <div class="result-title">Executive Summary</div>
+                    <p id="resSummary" style="margin: 0.3rem 0 0; color: var(--text-color); line-height: 1.4;"></p>
+                </div>
+            </div>
+
+            <h4 style="margin-top: 1.5rem;">Raw SSE Event Stream</h4>
+            <pre id="eventLog">Waiting for events...</pre>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = "http://localhost:8000";
+        let eventSource = null;
+
+        async function submitText() {
+            const text = document.getElementById("textInput").value.trim();
+            const source = document.getElementById("sourceSelect").value;
+            const submitBtn = document.getElementById("submitBtn");
+
+            if (!text) {
+                alert("Please enter text payload.");
+                return;
+            }
+
+            submitBtn.disabled = true;
+            document.getElementById("statusCard").style.display = "block";
+            document.getElementById("insightsContainer").style.display = "none";
+            document.getElementById("eventLog").innerText = "Submitting task to /api/ingest...\n";
+            resetPipelineSteps();
+
+            try {
+                const response = await fetch(`${API_BASE}/api/ingest`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: text, source: source })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Ingest failed with status ${response.status}`);
+                }
+
+                const data = await response.json();
+                document.getElementById("taskIdDisplay").innerText = `Task ID: ${data.task_id}`;
+                appendLog(`[HTTP 202] Task Queued successfully: ${data.task_id}`);
+
+                // Subscribe to SSE Stream
+                subscribeToSSE(data.task_id);
+
+            } catch (err) {
+                appendLog(`[ERROR] ${err.message}`);
+                submitBtn.disabled = false;
+            }
+        }
+
+        function subscribeToSSE(taskId) {
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            const streamUrl = `${API_BASE}/api/stream/${taskId}`;
+            appendLog(`Connecting to SSE stream: ${streamUrl}`);
+
+            eventSource = new EventSource(streamUrl);
+
+            eventSource.onopen = () => {
+                appendLog("[SSE] Connection established.");
+            };
+
+            eventSource.onmessage = (e) => {
+                appendLog(`[SSE EVENT] ${e.data}`);
+                try {
+                    const parsed = JSON.parse(e.data);
+                    updatePipelineVisuals(parsed.status);
+
+                    if (parsed.status === "completed") {
+                        displayInsights(parsed.payload);
+                        eventSource.close();
+                        document.getElementById("submitBtn").disabled = false;
+                        appendLog("[SSE] Stream finished.");
+                    }
+                } catch (err) {
+                    console.error("Error parsing event data:", err);
+                }
+            };
+
+            eventSource.onerror = (err) => {
+                appendLog("[SSE] Connection closed or ping idle.");
+            };
+        }
+
+        function updatePipelineVisuals(status) {
+            const steps = ["queued", "processing", "indexing", "completed"];
+            const currIdx = steps.indexOf(status);
+
+            steps.forEach((s, idx) => {
+                const el = document.getElementById(`step-${s}`);
+                if (!el) return;
+                el.classList.remove("active", "completed");
+                if (idx < currIdx) {
+                    el.classList.add("completed");
+                } else if (idx === currIdx) {
+                    el.classList.add("active");
+                }
+            });
+        }
+
+        function resetPipelineSteps() {
+            ["queued", "processing", "indexing", "completed"].forEach(s => {
+                const el = document.getElementById(`step-${s}`);
+                if (el) el.classList.remove("active", "completed");
+            });
+        }
+
+        function displayInsights(payload) {
+            if (!payload || !payload.insights) return;
+            const ins = payload.insights;
+
+            const sentimentEl = document.getElementById("resSentiment");
+            sentimentEl.innerText = ins.sentiment || "Neutral";
+            sentimentEl.className = "result-value badge " + (
+                ins.sentiment === "Positive" ? "badge-positive" :
+                ins.sentiment === "Negative" ? "badge-negative" : "badge-neutral"
+            );
+
+            document.getElementById("resCategory").innerText = ins.category || "General";
+            document.getElementById("resEntities").innerText = (ins.entities && ins.entities.length) ? ins.entities.join(", ") : "None";
+            document.getElementById("resSummary").innerText = ins.summary || "N/A";
+            document.getElementById("insightsContainer").style.display = "block";
+        }
+
+        function appendLog(msg) {
+            const logEl = document.getElementById("eventLog");
+            logEl.innerText += `${msg}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+    </script>
+</body>
+</html>
